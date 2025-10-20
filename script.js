@@ -15,6 +15,9 @@ const DEFAULT_STATE = {
   pomodoroLog: []
 };
 
+let storageFallback = false;
+const storage = createSafeStorage();
+
 const elements = {
   body: document.body,
   taskForm: document.getElementById('task-form'),
@@ -54,7 +57,8 @@ const elements = {
   stopwatchStart: document.getElementById('stopwatch-start'),
   stopwatchPause: document.getElementById('stopwatch-pause'),
   stopwatchReset: document.getElementById('stopwatch-reset'),
-  themeSelect: document.getElementById('theme-select')
+  themeSelect: document.getElementById('theme-select'),
+  storageWarning: document.getElementById('storage-warning')
 };
 
 let state = loadState();
@@ -79,6 +83,7 @@ function initialise() {
   attachEventListeners();
   updateTimerInputsFromState();
   renderAll();
+  updateStorageWarning();
 }
 
 function seedDefaultData() {
@@ -110,7 +115,7 @@ function seedDefaultData() {
 
 function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = storage.getItem(STORAGE_KEY);
     if (!raw) {
       return deepClone(DEFAULT_STATE);
     }
@@ -127,7 +132,12 @@ function loadState() {
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    storage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.error('No se pudo guardar la información de manera persistente.', error);
+  }
+  updateStorageWarning();
 }
 
 function deepClone(obj) {
@@ -945,6 +955,75 @@ function applyTheme(theme) {
   elements.body.classList.add(`theme-${theme}`);
   state.settings.theme = theme;
   saveState();
+}
+
+function updateStorageWarning() {
+  if (!elements.storageWarning) return;
+  elements.storageWarning.classList.toggle('hidden', !storage.isFallback());
+}
+
+function createSafeStorage() {
+  const memoryStore = {};
+  try {
+    const testKey = '__pomodoro_test__';
+    window.localStorage.setItem(testKey, 'ok');
+    window.localStorage.removeItem(testKey);
+  } catch (error) {
+    storageFallback = true;
+    console.warn('localStorage no está disponible, se utilizará memoria temporal.', error);
+  }
+
+  function storeInMemory(key, value) {
+    if (typeof value === 'undefined') {
+      delete memoryStore[key];
+    } else {
+      memoryStore[key] = String(value);
+    }
+  }
+
+  return {
+    getItem(key) {
+      if (!storageFallback) {
+        try {
+          return window.localStorage.getItem(key);
+        } catch (error) {
+          storageFallback = true;
+          console.warn('Error al leer localStorage, usando memoria temporal.', error);
+          updateStorageWarning();
+        }
+      }
+      return Object.prototype.hasOwnProperty.call(memoryStore, key) ? memoryStore[key] : null;
+    },
+    setItem(key, value) {
+      if (!storageFallback) {
+        try {
+          window.localStorage.setItem(key, value);
+          return;
+        } catch (error) {
+          storageFallback = true;
+          console.warn('Error al guardar en localStorage, usando memoria temporal.', error);
+          updateStorageWarning();
+        }
+      }
+      storeInMemory(key, value);
+    },
+    removeItem(key) {
+      if (!storageFallback) {
+        try {
+          window.localStorage.removeItem(key);
+          return;
+        } catch (error) {
+          storageFallback = true;
+          console.warn('Error al eliminar datos de localStorage, usando memoria temporal.', error);
+          updateStorageWarning();
+        }
+      }
+      storeInMemory(key);
+    },
+    isFallback() {
+      return storageFallback;
+    }
+  };
 }
 
 function startStopwatch() {
