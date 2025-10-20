@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planificador Pomodoro con Tareas</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-blue">
+  <header class="app-header">
+    <div>
+      <h1>Planificador Pomodoro</h1>
+      <p class="subtitle">Organiza tus tareas por grupos, subgrupos y etiquetas mientras controlas tus pomodoros.</p>
+    </div>
+    <div class="header-controls">
+      <label class="theme-picker">
+        Paleta de colores
+        <select id="theme-select">
+          <option value="blue">Azul</option>
+          <option value="teal">Turquesa</option>
+          <option value="purple">Púrpura</option>
+          <option value="sunset">Atardecer</option>
+        </select>
+      </label>
+    </div>
+  </header>
+  <main class="layout">
+    <aside class="sidebar">
+      <section class="card">
+        <h2>Crear nueva tarea</h2>
+        <form id="task-form">
+          <label>
+            Título de la tarea
+            <input id="task-title" type="text" placeholder="Ej. 📚 Repasar cardiología" required>
+          </label>
+          <label>
+            Descripción o notas
+            <textarea id="task-notes" rows="3" placeholder="Añade detalles, objetivos o recordatorios"></textarea>
+          </label>
+          <label>
+            Documento o enlace de referencia
+            <input id="task-document" type="url" placeholder="https://..." />
+          </label>
+          <div class="group-inputs">
+            <label>
+              Grupo principal
+              <select id="group-select"></select>
+            </label>
+            <label id="new-group-wrapper" class="hidden">
+              Nombre del nuevo grupo
+              <input id="new-group-name" type="text" placeholder="Ej. Salud"/>
+            </label>
+            <label>
+              Subgrupo
+              <select id="subgroup-select"></select>
+            </label>
+            <label id="new-subgroup-wrapper" class="hidden">
+              Nombre del nuevo subgrupo
+              <input id="new-subgroup-name" type="text" placeholder="Ej. Cardiología"/>
+            </label>
+          </div>
+          <label>
+            Etiquetas o hashtags (separados por coma o espacio)
+            <input id="task-tags" type="text" placeholder="#repaso #salud" />
+          </label>
+          <button type="submit" class="primary">Guardar tarea</button>
+          <button type="button" id="cancel-edit" class="secondary hidden">Cancelar edición</button>
+        </form>
+      </section>
+      <section class="card">
+        <h2>Resumen por grupos</h2>
+        <div id="group-summary" class="summary-list"></div>
+      </section>
+      <section class="card">
+        <h2>Resumen por etiquetas</h2>
+        <div id="tag-summary" class="summary-list"></div>
+      </section>
+    </aside>
+    <section class="task-board card">
+      <div class="task-board-header">
+        <h2>Tablero de tareas</h2>
+        <div>
+          <label>
+            Buscar
+            <input type="search" id="task-search" placeholder="Filtra por texto o hashtag" />
+          </label>
+        </div>
+      </div>
+      <div id="tasks-container" class="tasks-container"></div>
+    </section>
+    <section class="timers">
+      <section class="card">
+        <h2>Pomodoro</h2>
+        <div class="active-task" id="active-task">
+          <span class="label">Tarea activa:</span>
+          <span id="active-task-name">Ninguna</span>
+        </div>
+        <div class="timer-display" id="pomodoro-display">25:00</div>
+        <div class="timer-mode">
+          <label><input type="radio" name="timer-mode" value="pomodoro" checked> Pomodoro</label>
+          <label><input type="radio" name="timer-mode" value="continuous"> Conteo continuo</label>
+        </div>
+        <div class="timer-settings" id="pomodoro-settings">
+          <label>
+            Duración de foco (minutos)
+            <input type="number" id="focus-duration" min="1" max="180" value="25">
+          </label>
+          <label>
+            Descanso corto (minutos)
+            <input type="number" id="break-duration" min="1" max="60" value="5">
+          </label>
+          <label>
+            Descanso largo (minutos)
+            <input type="number" id="long-break-duration" min="1" max="90" value="15">
+          </label>
+          <label>
+            Cada cuántos pomodoros tomar descanso largo
+            <input type="number" id="long-break-interval" min="1" max="12" value="4">
+          </label>
+        </div>
+        <div class="timer-settings hidden" id="continuous-settings">
+          <label>
+            Meta de minutos
+            <input type="number" id="continuous-goal" min="1" max="300" value="60">
+          </label>
+        </div>
+        <div class="timer-controls">
+          <button id="timer-start" class="primary">Comenzar</button>
+          <button id="timer-pause">Pausar</button>
+          <button id="timer-reset">Reiniciar</button>
+          <button id="timer-skip" title="Saltar al siguiente bloque">Saltar</button>
+        </div>
+        <div class="timer-stats">
+          <div>
+            <span class="stat-label">Pomodoros completados hoy:</span>
+            <span id="pomodoro-count">0</span>
+          </div>
+          <div>
+            <span class="stat-label">Duración del bloque actual:</span>
+            <span id="current-block-label">Foco</span>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Stopwatch</h2>
+        <div class="timer-display" id="stopwatch-display">00:00:00</div>
+        <div class="timer-controls">
+          <button id="stopwatch-start" class="primary">Iniciar</button>
+          <button id="stopwatch-pause">Pausar</button>
+          <button id="stopwatch-reset">Reiniciar</button>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Análisis</h2>
+        <div id="analytics"></div>
+      </section>
+    </section>
+  </main>
+  <template id="task-template">
+    <article class="task-card">
+      <header>
+        <h3 class="task-title"></h3>
+        <div class="task-actions">
+          <button class="secondary" data-action="activate">Activar</button>
+          <button class="secondary" data-action="edit">Editar</button>
+          <button class="danger" data-action="delete">Eliminar</button>
+        </div>
+      </header>
+      <p class="task-notes"></p>
+      <p class="task-document"></p>
+      <div class="task-tags"></div>
+      <footer class="task-footer">
+        <span class="pomodoro-count"></span>
+        <span class="total-focus"></span>
+      </footer>
+    </article>
+  </template>
+  <script src="script.js"></script>
+</body>
+</html>
